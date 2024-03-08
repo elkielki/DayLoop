@@ -32,6 +32,7 @@
     "react-native-side-drawer": "^2.1.0",
     "react-native-simple-picker": "^3.1.4",
     "react-native-sortable-list": "^0.0.25",
+    "react-native-swipe-list-view": "^3.2.9",
     "react-native-swipeable-list": "^0.1.2",
     "react-native-timer-picker": "^1.5.1",
     "react-native-vector-icons": "^10.0.3",

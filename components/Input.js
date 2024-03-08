@@ -14,7 +14,7 @@ import SwipeableFlatList from 'react-native-swipeable-list';
 const Input = ({itemTitle, editState}) => {
 
     const [title, setTitle] = useState(itemTitle);
-
+    
     return (
         <View>
             <TextInput 

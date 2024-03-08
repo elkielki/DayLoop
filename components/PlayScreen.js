@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useContext} from 'react';
 import { View, Text, TouchableOpacity, Button, SafeAreaView, StyleSheet, Image } from 'react-native';
 import { TimerPickerModal } from "react-native-timer-picker";
 import MenuDrawer from 'react-native-side-drawer'
@@ -7,13 +7,18 @@ import { useNavigation } from '@react-navigation/native';
 import Popover from 'react-native-popover-view';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import {ListContext} from '../listContext.js';
 
 const ICON_COLOR = 'black'; 
 const TEXT_COLOR = 'black';
 
-const PlayScreen = ({routine, handleClose}) => {
-    const [currentExercise, setCurrentExercise] = useState(routine.exercises[0]);
-    const [remainingSecs, setRemainingSecs] = useState(routine.exercises[0].timer);
+const PlayScreen = ({handleClose}) => {
+    const {routineValue, idxValue} = useContext(ListContext);
+    const [routineList, setRoutineList] = routineValue;
+    const [currentRoutineIdx, setCurrentRoutineIdx] = idxValue;
+
+    const [currentExercise, setCurrentExercise] = useState(routineList[currentRoutineIdx].exercises[0]);
+    const [remainingSecs, setRemainingSecs] = useState(routineList[currentRoutineIdx].exercises[0].timer);
     const [isActive, setIsActive] = useState(false);
 
     useEffect(() => {
@@ -76,28 +81,28 @@ const PlayScreen = ({routine, handleClose}) => {
     };
 
     const startNextExercise = () => {
-        let index = routine.exercises.indexOf(routine.exercises.find((exercise) => {
+        let index = routineList[currentRoutineIdx].exercises.indexOf(routineList[currentRoutineIdx].exercises.find((exercise) => {
             return exercise === currentExercise;
         }))
-        if (index == (routine.exercises.length - 1)) {
+        if (index == (routineList[currentRoutineIdx].exercises.length - 1)) {
             return;
         }
         else {
-            setCurrentExercise(current => routine.exercises[index + 1])
-            setRemainingSecs(routine.exercises[index + 1].timer);
+            setCurrentExercise(current => routineList[currentRoutineIdx].exercises[index + 1])
+            setRemainingSecs(routineList[currentRoutineIdx].exercises[index + 1].timer);
         }
     }
  
     const startPreviousExercise = () => {
-        let index = routine.exercises.indexOf(routine.exercises.find((exercise) => {
+        let index = routineList[currentRoutineIdx].exercises.indexOf(routineList[currentRoutineIdx].exercises.find((exercise) => {
             return exercise === currentExercise;
         }))
         if (index == 0) {
             return;
         }
         else {
-            setCurrentExercise(current => routine.exercises[index - 1])
-            setRemainingSecs(routine.exercises[index - 1].timer)
+            setCurrentExercise(current => routineList[currentRoutineIdx].exercises[index - 1])
+            setRemainingSecs(routineList[currentRoutineIdx].exercises[index - 1].timer)
         }
     }
 
@@ -107,7 +112,7 @@ const PlayScreen = ({routine, handleClose}) => {
             <TouchableOpacity onPress={() => handleClose(false)}>
                 <Icon name='close-outline' color={ICON_COLOR} size={30} style={styles.endButton} />
             </TouchableOpacity>
-            <Text style={styles.routineTitle} >{routine.title}</Text>
+            <Text style={styles.routineTitle}>{routineList[currentRoutineIdx].title}</Text>
             <Text style={styles.currentExerciseTitle} >{currentExercise.title}</Text>
             <Text style={styles.currentTime} >{formattedTime}</Text>
             <View style={styles.buttonView}>
