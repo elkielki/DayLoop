@@ -1,16 +1,18 @@
-import React, {useState, useEffect, useContext} from 'react';
-import { View, Text, TouchableOpacity, Button, SafeAreaView, StyleSheet, Image } from 'react-native';
-import { TimerPickerModal } from "react-native-timer-picker";
-import MenuDrawer from 'react-native-side-drawer'
-// import { createDrawerNavigator } from '@react-navigation/drawer';
-import { useNavigation } from '@react-navigation/native';
-import Popover from 'react-native-popover-view';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Button } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import {ListContext} from '../listContext.js';
+import { Audio } from 'expo-av';
+import { InterstitialAd, TestIds, AdEventType } from 'react-native-google-mobile-ads';
 
-const ICON_COLOR = 'black'; 
-const TEXT_COLOR = 'black';
+const textColor = '#F4F3F2';
+const bgColor = '#1e272e';
+const interstitial = InterstitialAd.createForAdRequest('ca-app-pub-5596202903526662/8869946325',
+    { 
+        requestNonPersonalizedAdsOnly: true,
+        keywords: ['exercise', 'mental', 'health', 'journal', 'schedule', 'plan']
+    });
 
 const PlayScreen = ({handleClose}) => {
     const {routineValue, idxValue} = useContext(ListContext);
@@ -21,10 +23,48 @@ const PlayScreen = ({handleClose}) => {
     const [remainingSecs, setRemainingSecs] = useState(routineList[currentRoutineIdx].exercises[0].timer);
     const [isActive, setIsActive] = useState(false);
 
+    const [soundExercise, setSoundExercise] = useState();
+    const [soundExerciseReplay, setSoundExerciseReplay] = useState(false);
+    const [adLoaded, setAdLoaded] = useState(false);
+
+    const loadAd = () => {
+        const handleAdLoad = interstitial.addAdEventListener(
+            AdEventType.LOADED,
+            () => {
+                setAdLoaded(true);
+            }
+        )
+        const handleAdClose = interstitial.addAdEventListener(
+            AdEventType.CLOSED,
+            () => {
+                setAdLoaded(false);
+                interstitial.load();
+            }
+        );
+
+        interstitial.load(); 
+
+        return () => {
+            handleAdClose();
+            handleAdLoad();
+        }
+    } 
+
+    useEffect(() => {
+        async function initiateSound() {
+            const { sound } = await Audio.Sound.createAsync(require('../assets/exerciseBell.mp3'));
+            setSoundExercise(sound);
+        }
+        initiateSound();
+        const handleInterstitialEvent = loadAd();
+        return handleInterstitialEvent; 
+    }, [])
+
     useEffect(() => {
       let interval = null;
       if (isActive) {
         if (remainingSecs == 0) {
+            playSound();
             startNextExercise();
         } else {
             interval = setInterval(() => {
@@ -36,6 +76,16 @@ const PlayScreen = ({handleClose}) => {
       }
       return () => clearInterval(interval);
     }, [isActive, remainingSecs])
+
+    const playSound = async () => {
+        if (!soundExerciseReplay) { 
+            await soundExercise.playAsync();
+            setSoundExerciseReplay(true);
+        }
+        else {
+            await soundExercise.replayAsync();
+        }
+    }
 
     const getRemaining = (time) => {
       const hr = Math.floor(time / 3600)
@@ -73,11 +123,6 @@ const PlayScreen = ({handleClose}) => {
 
     const toggleTimer = () => {
       setIsActive(!isActive);
-      /* if (isActive) {
-        pauseTimer();
-      } else {
-        startTimer();
-      }  */
     };
 
     const startNextExercise = () => {
@@ -85,6 +130,10 @@ const PlayScreen = ({handleClose}) => {
             return exercise === currentExercise;
         }))
         if (index == (routineList[currentRoutineIdx].exercises.length - 1)) {
+            if (adLoaded) {
+                interstitial.show();
+                interstitial.load();
+            } 
             return;
         }
         else {
@@ -106,38 +155,36 @@ const PlayScreen = ({handleClose}) => {
         }
     }
 
-// have to set currentexercise and find a way to loop it when the timer ends
     return (
-        <SafeAreaView style={styles.safeAreaView}>
+        <View style={styles.safeAreaView}>
             <TouchableOpacity onPress={() => handleClose(false)}>
-                <Icon name='close-outline' color={ICON_COLOR} size={30} style={styles.endButton} />
+                <Icon name='close-outline' color={textColor} size={hp('4%')} style={styles.endButton} />
             </TouchableOpacity>
             <Text style={styles.routineTitle}>{routineList[currentRoutineIdx].title}</Text>
             <Text style={styles.currentExerciseTitle} >{currentExercise.title}</Text>
             <Text style={styles.currentTime} >{formattedTime}</Text>
             <View style={styles.buttonView}>
                 <TouchableOpacity onPress={startPreviousExercise}>
-                    <Icon name='play-back-outline' color={ICON_COLOR} size={50} />
+                    <Icon name='play-back-outline' color={textColor} size={hp('7%')} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={toggleTimer}>
                     {isActive ?
-                        <Icon name='pause-outline' color={ICON_COLOR} size={50} />
+                        <Icon name='pause-outline' color={textColor} size={hp('7%')} />
                         :
-                        <Icon name='play-outline' color={ICON_COLOR} size={50} />
+                        <Icon name='play-outline' color={textColor} size={hp('7%')} />
                     }
                 </TouchableOpacity>
                 <TouchableOpacity onPress={startNextExercise}>
-                    <Icon name='play-forward-outline' color={ICON_COLOR} size={50} />
+                    <Icon name='play-forward-outline' color={textColor} size={hp('7%')} />
                 </TouchableOpacity>
             </View>
-        </SafeAreaView>
+        </View>
     )
 }
 
 const styles = StyleSheet.create({
     safeAreaView: {
-    //    flex: 1,
-        backgroundColor: 'white',
+        backgroundColor: bgColor,
         width: wp('80%'),
         height: hp('60%'),
     },
@@ -148,22 +195,22 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontWeight: 'bold',
         fontSize: hp('3%'), 
-        color: TEXT_COLOR,
+        color: textColor,
         paddingBottom: hp('3%'),
-        paddingTop: hp('8%'),
+        paddingTop: hp('4%'),
     },
     currentExerciseTitle: {
         textAlign: 'center',
         fontWeight: 'bold',
         fontSize: hp('6%'), 
-        color: TEXT_COLOR,
+        color: textColor,
         paddingBottom: hp('2.5%'),
     },
     currentTime: {
         textAlign: 'center',
         fontWeight: 'bold',
         fontSize: hp('7%'), 
-        color: TEXT_COLOR,
+        color: textColor,
         paddingBottom: hp('3%'),
     },
     buttonView: {
@@ -174,8 +221,7 @@ const styles = StyleSheet.create({
         paddingTop: hp('1%'),
         paddingRight: wp('2%'),
         textAlign: 'right',
-        color: ICON_COLOR,
-    //    fontSize: 15,
+        color: textColor,
     },
 })
 

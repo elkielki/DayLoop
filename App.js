@@ -1,51 +1,100 @@
-import React, {useState, useEffect, useCallback, useContext} from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Button, SafeAreaView } from 'react-native';
-import Modal from "react-native-modal";
+import React, {useState, useEffect} from 'react';
+import { View, StyleSheet, Text } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/Ionicons';
-import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
-import { NestableScrollContainer, DraggableFlatList } from 'react-native-draggable-flatlist'
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
-import {ListContext} from './listContext.js';
+import { ListContext } from './listContext.js';
 import List from './components/List.js';
-import PlayScreen from './components/PlayScreen.js';
 import AddExerciseForm from './components/AddExercise.js';
 import RoutineMenu from './components/RoutineMenu.js';
 import Toolbar from './components/Toolbar.js';
-//import DurationPicker from 'react-duration-picker'
-//import Input from './Input.js';
-import DeleteRoutine from './components/DeleteRoutine.js';
-
-const TEXT_COLOR = 'black';
-const ICON_COLOR = 'black'; 
+import mobileAds, { BannerAd, BannerAdSize, TestIds, AdsConsent, AdsConsentStatus, AdsConsentDebugGeography, MaxAdContentRating } from 'react-native-google-mobile-ads';
 
 const App = () => {
+  /* AD STUFF */  
+  useEffect(() => {
+    let isMobileAdsStartCalled = false;
+
+    async function startGoogleMobileAdsSDK() {
+      if (isMobileAdsStartCalled) return;
+      isMobileAdsStartCalled = true;
+      // Initialize the Google Mobile Ads SDK.
+      mobileAds()
+        .setRequestConfiguration({
+          // Update all future requests suitable for parental guidance
+          maxAdContentRating: MaxAdContentRating.G,
+          // Indicates that you want your content treated as child-directed for purposes of COPPA.
+          tagForChildDirectedTreatment: true,
+          // Indicates that you want the ad request to be handled in a
+          // manner suitable for users under the age of consent.
+          tagForUnderAgeOfConsent: true,
+          // An array of test device IDs to allow.
+          testDeviceIdentifiers: ['EMULATOR'],
+        })
+        await mobileAds().initialize()
+    }
+
+    const checkConsent = async () => {
+      // Request an update for the consent information.
+      AdsConsent.requestInfoUpdate().then(() => {
+        AdsConsent.loadAndShowConsentFormIfRequired().then(adsConsentInfo => {
+          // Consent has been gathered.
+          if (adsConsentInfo.canRequestAds) {
+            startGoogleMobileAdsSDK()
+          }
+        })
+      })
+    
+      // checks if consent was given for ads
+      const {canRequestAds} = await AdsConsent.getConsentInfo()
+      if (canRequestAds) {
+        const {
+          storeAndAccessInformationOnDevice,
+        } = await AdsConsent.getUserChoices();
+        
+        if (storeAndAccessInformationOnDevice === false) {
+          /**
+           * The user declined consent for purpose 1,
+           * the Google Mobile Ads SDK won't serve ads.
+           */
+        }
+        startGoogleMobileAdsSDK()
+      }    
+    }
+    
+    checkConsent();
+  }, []);
+
+
+/*  END OF AD STUFF */
+
   const initialRoutineListData = [
     {
+      routineId: '1433704743870', 
       title: "Routine 1",
       exercises: [
-        { title: "Stretch", timer: 600}, 
-        { title: "Push ups", timer: 600 },
-        { title: "Break", timer: 300 },
-        { title: "Sit ups", timer: 600 },
-        { title: "Push ups", timer: 600 },
-        { title: "Break", timer: 300 },
-        { title: "Sit ups", timer: 600 },
+        { id: '605997549887', title: "Stretch", timer: 600}, 
+        { id: '1075053131264', title: "Push ups", timer: 600 },
+        { id: '1554651914786', title: "Break", timer: 300 },
+        { id: '136863341813', title: "Sit ups", timer: 600 },
+        { id: '958556290930', title: "Push ups", timer: 600 },
+        { id: '1390505220267', title: "Break", timer: 300 },
+        { id: '50538861062', title: "Sit ups", timer: 600 },
       ],
     },
     {
+      routineId: '1176670278845',
       title: "Routine 2", 
       exercises: [
-        {  title: "Walk", timer: 600 },
-        {  title: "Break", timer: 300 },
-        {  title: "Sprint", timer: 600 },
-        {  title: "Break", timer: 600 },
-        {  title: "Walk", timer: 600 },
-        {  title: "Break", timer: 300 },
-        {  title: "Sprint", timer: 600 },
-        {  title: "Break", timer: 600 },
-        {  title: "Cooldown Stretch", timer: 600 },
+        {  id: '824424796008', title: "Meditate", timer: 600 },
+        {  id: '296850440129', title: "Take a shower", timer: 900 },
+        {  id: '908248117118', title: "Brush teeth", timer: 180 },
+        {  id: '1286573761744', title: "Make breakfast", timer: 600 },
+        {  id: '471290510918', title: "Eat", timer: 900 },
+        {  id: '803720080376', title: "Study", timer: 1800 },
+        {  id: '1232519517246', title: "Break", timer: 300 },
+        {  id: '750086264390', title: "Study", timer: 1800 },
+        {  id: '1012514496902', title: "Stretch", timer: 600 },
       ],
     }
   ];
@@ -56,7 +105,7 @@ const App = () => {
   const [currentRoutineIdx, setCurrentRoutineIdx] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [createNewExercise, setCreateNewExercise] = useState(false);
-  const [firstCircuit, setFirstCircuit] = useState('');
+
   useEffect(() => {
     const getData = async () => {
       const launchCheck = await AsyncStorage.getItem("hasLaunched");
@@ -68,7 +117,7 @@ const App = () => {
         try {
           const storedRL = await AsyncStorage.getItem("routineList");
           setRoutineList(JSON.parse(storedRL));
-          console.log("RoutineList: " + JSON.stringify(routineList));
+    //      console.log("RoutineList: " + JSON.stringify(routineList));
         } catch (error) {
           console.log("An error has occurred");
         }
@@ -85,334 +134,52 @@ const App = () => {
       setIsLoading(false);   
     }
   }, [])
-  
-// FOR ADD EXERCISE FORM ___________________________________________
-  
-//__________________________________________________________________________________
-// EXERCISE FUNCTIONS ____________________________________________________
 
-  
-
- // const [editIdx, setEditIdx] = useState(null);
-
-  /* value={editIdx === index ? titleInput : item.title}
-            onChangeText={text => setTitleInput(text)}
-            editable={editIdx === index} */
-  // what is displayed for each exercise
-  
-
-  // what is displayed for each exercise
-  const renderExercise1 = ({item, index, drag, isActive}) => {
-    return (
-      <View style={styles.exerciseView}>
-        <View style={styles.exerciseBodyView}>
-          {editState && 
-            <TouchableOpacity onLongPress={drag} disabled={!editState}>
-              <Icon name='menu-outline' color={ICON_COLOR} style={styles.sortButton} />
-            </TouchableOpacity>
-          }
-          <Text>{item.title}</Text> 
-          <Text>{formatTime(item.timer)}</Text>
-        </View>
-        {editState && 
-          <TouchableOpacity onPress={() => deleteExercise(item, index)} disabled={!editState}>
-            <Icon name='trash-outline' color={ICON_COLOR} style={styles.endButton} />
-          </TouchableOpacity>
-        }
-      </View>
-    );
-  };  
-
-  // occurs after dragging exercises in a routine; updates the index
-  const updateRoutine = async (data) => {
-    const updatedRoutine = {...routineList[currentRoutineIdx], exercises: data};
-    const newRoutineList = [...routineList];
-    newRoutineList[currentRoutineIdx] = updatedRoutine;
-    console.log("The data: " + JSON.stringify(data));
-    setRoutineList(newRoutineList)
-    try {
-      const storedRL = await AsyncStorage.setItem("routineList", JSON.stringify(newRoutineList));
-    } catch (error) {
-      console.log("An error has occurred");
-    }
-  };
-
-  
-
-  
-
-// EXERCISE FUNCTIONS END _____________________________________________________________
-// FOR TIMER INPUT _________________________________________________
-
-  // for when the user inputs the timer for a new exercise
-  const [editTimerInput, setEditTimerInput] = useState(false);
-
-  // shows the timer scroll wheel/user input modal
-  const [visible, setVisible] = useState(false);
-  
-  //const [timer, setTimer] = useState({hours: 0, minutes: 0, seconds: 0});
-  const [titleInput, setTitleInput] = useState('aaa');
-// _________________________________________________________________  
-// TIMER INPUT FUNCTIONS ______________________________________________________________
-
-  
-
-/*  // Timer input modal - actions after the user clicks accept
-  const onAccept = () => {
-    let timeStr = '';
-    if (selectedHour == 0) {
-        timeStr = '0' + selectedHour + ':'; 
-    }
-    else {
-        timeStr = selectedHour + ':';
-    }
-    if (selectedMinute == 0) {
-        timeStr = timeStr + '0' + selectedMinute + ':';
-    }
-    else {
-        timeStr = timeStr + selectedMinute + ':';
-    }
-    if (selectedSecond == 0) {
-        timeStr = timeStr + '0' + selectedSecond;
-    }
-    else {
-        timeStr = timeStr + selectedSecond;
-    }
-    setFormattedTime(timeStr);
-    setTimerInput(true);
-  };  */
-
-  // Adding Exercise Form: Handling timer input
-/*  const handleTimerPickerChange = (duration) => {
-    const { hrs, min, sec } = duration;
-    let timeStr = '';
-    if (hrs == 0) {
-        timeStr = '0' + hrs + ':'; 
-    }
-    else {
-        timeStr = hrs + ':';
-    }
-    if (min == 0) {
-        timeStr = timeStr + '0' + min + ':';
-    }
-    else {
-        timeStr = timeStr + min + ':';
-    }
-    if (selectedSecond == 0) {
-        timeStr = timeStr + '0' + selectedSecond;
-    }
-    else {
-        timeStr = timeStr + sec;
-    }
-    setFormattedTime(timeStr);
-    setTimer({hrs, min, sec});
-  }  */
-
-  const [openTimerModal, setOpenTimerModal] = useState(false);
-
-  
-
-  const handleEditState = (val) => {
-    if (val) {
-      setEditState(true);
-    } else {
-      setEditState(false);
-      setCreateNewExercise(false);
-      setNewExerciseInput('');
-      setInvalidInput(false);
-      setFormattedTime('');
-   //   setTimerInput(false);
-      setVisible(false);
-      setSelectedHour(0);
-      setSelectedMinute(0);
-      setSelectedSecond(0);
-    //  setTimer({hours: 0, minutes: 0, seconds: 0}); 
-    }
+  const handleNewExerciseButton = (value) => {
+    setCreateNewExercise(value);
   }
 
-// TIMER INPUT END _____________________________________________________________________
-
-
-
-/*  const createCopy = (data, idx) => {
-    const updatedExerciseList = routineList[currentRoutineIdx].exercises.slice(0);
-    updatedExerciseList.splice(idx, 0, data);
-    const updatedRoutine = {...routineList[currentRoutineIdx], exercises: updatedExerciseList};
-    const newRoutineList = [...routineList];
-    newRoutineList[currentRoutineIdx] = updatedRoutine;
-    setRoutineList(newRoutineList);
-    console.log("Copy idx: " + JSON.stringify(idx));
-    const updatedExerciseList = [
-      ...routineList[currentRoutineIdx].exercises.slice(0, idx+1), 
-      data,
-      ...routineList[currentRoutineIdx].exercises.slice(idx+1)
-    ]
-    const updatedRoutine = {...routineList[currentRoutineIdx], exercises: updatedExerciseList};
-    const newRoutineList = [...routineList];
-    newRoutineList[currentRoutineIdx] = updatedRoutine;
-    console.log("Copy: " + JSON.stringify(updatedExerciseList));
-    setRoutineList(newRoutineList);  
-  } */
-
-
-    
-
-    /*
-    // Add timer logic and sound playback logic here
-  const startTimer = () => {
-    setIsActive(true);
-    Timer.setInterval('countdown', () => {
-      setCurrentTime((prevTime) => {
-        if (prevTime > 0) {
-          return prevTime - 1;
-        } else {
-          // Timer reached zero, stop the timer and play the sound
-          setIsActive(false);
-          playSound();
-          return 0;
-        }
-      });
-    }, 1000);
-  };
-  
-  const pauseTimer = () => {
-    setIsActive(false);
-    Timer.clearInterval('countdown');
-  };
-  
-  const resetTimer = () => {
-    setIsActive(false);
-    setCurrentTime(duration);
-    Timer.clearInterval('countdown');
-  };
-  
-  
-
-  const playSound = () => {
-    // Specify the path to your sound file
-    const soundPath = 'path/to/your/sound.mp3';
-  
-    const sound = new Sound(soundPath, Sound.MAIN_BUNDLE, (error) => {
-      if (error) {
-        console.error('Failed to load the sound', error);
-        return;
-      }
-      sound.play((success) => {
-        if (success) {
-          console.log('Sound played successfully');
-        } else {
-          console.error('Sound playback failed');
-        }
-      });
-    });
-  } 
-  */
-
-  const deleteRoutine = async () => {
-    let updatedRoutineList = [...routineList];
-    updatedRoutineList = updatedRoutineList.filter(routine => (routine !== routineList[currentRoutineIdx]));
-    setRoutineList(updatedRoutineList);
-    try {
-      const storedRL = await AsyncStorage.setItem("routineList", JSON.stringify(updatedRoutineList));
-    } catch (error) {
-      console.log("An error has occurred");
-    }
-  }
-  // have to remove safeareaview for android and just switch with marginTop 
   return (
-    <GestureHandlerRootView style={{flex:1}}>
-      <SafeAreaView style={styles.safeAreaView} >
+    <View style={styles.viewApp}>
+      <GestureHandlerRootView style={{flex: 1}}>
         {isLoading ? 
           <View style={styles.loadingView}>
             <Text>Loading!</Text>
           </View>
         :
           <ListContext.Provider value={{routineValue: [routineList, setRoutineList], idxValue: [currentRoutineIdx, setCurrentRoutineIdx]}}>
-            {routineList.length == 0 ?
-              <View style={styles.loadingView}>
-                <Text>Click the button to create your first routine.</Text>
-                <Button title="Create Routine" onPress={createFirstRoutine} />
-              </View> 
-              :
-              (<View>
-                <RoutineMenu />
-                <Toolbar setOpenForm={setCreateNewExercise} openForm={createNewExercise} />
-                <List />
-                {createNewExercise && <AddExerciseForm />}
-                <DeleteRoutine />
-              </View>)} 
+            <View style={styles.viewAppScreen}>
+              <RoutineMenu />
+              <Toolbar setOpenForm={handleNewExerciseButton} openForm={createNewExercise} />
+              <List />
+              {createNewExercise && <AddExerciseForm openForm={setCreateNewExercise} />} 
+            </View> 
+            <BannerAd
+              unitId='ca-app-pub-5596202903526662/8265395371'
+              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+              requestOptions={{ 
+                requestNonPersonalizedAdsOnly: true,
+                keywords: ['exercise', 'mental', 'health', 'journal', 'schedule', 'plan']
+              }}
+            />
           </ListContext.Provider>
         }
-      </SafeAreaView>  
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </View> 
   );
 };
 
 export default App;
 
+const  textColor = '#F4F3F2';
+const bgColor = '#1e272e';
 
-
-/*
-
-
-              
-
-
-
-
-                      {routineList[currentRoutineIdx].exercises.map((item, idx) => (
-                      ))}
-{editState && 
-                              <TouchableOpacity disabled={!editState}>
-                                <Icon name='menu-outline' color={ICON_COLOR} style={styles.sortButton} />
-                              </TouchableOpacity>
-                            }
-<DraggableFlatList
-                          data={routineList[currentRoutineIdx].exercises}
-                          renderItem={renderExercise}
-                          keyExtractor={(item, index) => ('list' + index.toString())}
-                          onDragEnd={({data}) => updateRoutine(data)}
-                          ListFooterComponent={newExerciseComponent}
-                        /> 
-
-<View key={'list' + idx} style={styles.exerciseView}>
-                          <View style={styles.exerciseBodyView}>
-                            <TextInput
-                              value={editState ? titleInput : item.title}
-                              onChangeText={text => setTitleInput(text)}
-                              editable={editState} 
-                            /> 
-                            <Button title='Submit' onPress={() => editText}  />
-                            <Text>{formatTime(item.timer)}</Text>
-                          </View>
-                          <Button title='Edit' onPress={() => setEditState(true)} />
-                          {editState && 
-                            <TouchableOpacity onPress={() => deleteExercise(item, idx)} disabled={!editState}>
-                              <Icon name='trash-outline' color={ICON_COLOR} style={styles.endButton} />
-                            </TouchableOpacity>
-                          }
-                        </View>
-
-                      <DurationPicker
-                        onChange={handleTimerPickerChange}
-                        initialDuration={{ hours: 0, minutes: 0, seconds: 0 }}
-                        maxHours={23}
-                      />
-
-
-
-
-
-
-    borderRadius: 10,
-    marginTop: 10,
-*/
 const styles = StyleSheet.create({
-  safeAreaView: {
+  viewApp: {
     height: hp('100%'),
     width: wp('100%'),
-  //  flex: 1,
-    backgroundColor: 'white'
+    flex: 1,
+    backgroundColor: bgColor,
   },
   loadingView: {
     display: 'flex',
@@ -421,45 +188,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sortButton: {
-    textAlign: 'left',
-    color: ICON_COLOR,
-    fontSize: hp('3%'),
+  viewAppScreen: {
+    flex: 1, 
+    width: wp('100%'), 
+    height: hp('100%')
   },
-  
-  draggableList: {
-    paddingBottom: 20,
-  },
-  scrollContainer: {
-    paddingBottom: 100//hp('80%')
-  }
 
 });
-
-
-
-/*
-<MultiColumnModalPicker
-                        visible={visible}
-                        actionButtons="bottom"
-                        column1={hours}
-                        column2={minutes}
-                        column3={seconds}
-                        onValueChange1={(value) => handleHrChange(value)}
-                        onValueChange2={(value) => handleMinChange(value)}
-                        onValueChange3={(value) => handleSecChange(value)}
-                        selectedValue1={selectedHour}
-                        selectedValue2={selectedMinute}
-                        selectedValue3={selectedSecond}
-                        onClose={()=> setVisible(false)}
-                        onAccept={onAccept}
-                        // Custom styles
-                        hPadding={20}
-                        bgColor="#097CF6"
-                        selectionHighlightColor="#0024FF"
-                        cancelButtonBgColor="#2E7DD1"
-                        cancelButtonTextStyle={{ color: "#F0F0F0" }}
-                      />
-
-
-*/

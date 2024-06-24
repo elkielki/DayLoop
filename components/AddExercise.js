@@ -1,24 +1,17 @@
-import React, {useState, useEffect, useContext} from 'react';
-import { View, StyleSheet, Text, TextInput, TouchableOpacity, ScrollView, Button, SafeAreaView } from 'react-native';
-import Modal from "react-native-modal";
-import SwipeableFlatList from 'react-native-swipeable-list';
-import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
-import Icon from 'react-native-vector-icons/Ionicons';
+import React, { useState, useContext } from 'react';
+import { View, StyleSheet, Text, TextInput, TouchableOpacity } from 'react-native';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import WheelPicker from 'react-native-wheely';
-import {ListContext} from '../listContext.js';
+import { ListContext } from '../listContext.js';
 import TimerInputModal from "./TimerInputModal";
 
-const TEXT_COLOR = 'black';
-const ICON_COLOR = 'black'; 
+const textColor = '#F4F3F2';
+const bgColor = '#1e272e';
 
-const AddExerciseForm = () => {
+const AddExerciseForm = ({openForm}) => {
     const {routineValue, idxValue} = useContext(ListContext);
     const [routineList, setRoutineList] = routineValue;
     const [currentRoutineIdx, setCurrentRoutineIdx] = idxValue;
-
-    // to set the state for whether a routine can be edited or not
-    const [editState, setEditState] = useState(false);  // maybe not needed anymore
     
     // for a new exercise title input
     const [newExerciseInput, setNewExerciseInput] = useState('');
@@ -34,17 +27,19 @@ const AddExerciseForm = () => {
     // actions after user clicks "Create" to create a new exercise 
     const addNewExercise = async () => {
         if (newExerciseInput.trim() != '') {
-            if ((formattedTime != '00:00:00') || (formattedTime != null)) {
-                console.log("entered here");
+            if (!((time.hours === 0) & (time.minutes === 0) & (time.seconds === 0))) {
+                const newId = Math.floor(Date.now() * Math.random());
                 const totalSeconds = time.hours * 3600 + time.minutes * 60 + time.seconds;
-                const updatedExerciseList = [...routineList[currentRoutineIdx].exercises,  { title: newExerciseInput, timer: totalSeconds }];
+                const updatedExerciseList = [...routineList[currentRoutineIdx].exercises,  { id: newId, title: newExerciseInput, timer: totalSeconds }];
                 const updatedRoutine = {...routineList[currentRoutineIdx], exercises: updatedExerciseList};
                 const newRoutineList = [...routineList];
                 newRoutineList[currentRoutineIdx] = updatedRoutine;
                 setRoutineList(newRoutineList);
                 setNewExerciseInput('');
+                setFormattedTime('00:00:00');
                 setInvalidInput(false);
-                setCreateNewExercise(false);
+                openForm(false);
+                setTime({hours: 0, minutes: 0, seconds: 0});
                 try {
                     const storedRL = await AsyncStorage.setItem("routineList", JSON.stringify(newRoutineList));
                 } catch (error) {
@@ -54,7 +49,7 @@ const AddExerciseForm = () => {
                 setInvalidInput(true);
             }
         } else {
-        setInvalidInput(true);
+            setInvalidInput(true);
         }
     }
 
@@ -80,22 +75,30 @@ const AddExerciseForm = () => {
         setOpenTimerModal(false);
     }
 
-    const cancelTimerInput = () => {
-        setFormattedTime('00:00:00'); 
+    const cancelTimerInput = () => { 
         setOpenTimerModal(false);
     }
 
+    const closeForm = () => {
+        openForm(false);
+        setNewExerciseInput('');
+        setTime({hours: 0, minutes: 0, seconds: 0});
+        setFormattedTime('00:00:00');
+    }
+
     return (
-        <View style={styles.newExerciseView} >
-            <View style={styles.newExerciseSubView}>
+        <View style={styles.viewMain} >
+            <View style={styles.viewInputBox}>
                 <TextInput
                     onChangeText={(text) => setNewExerciseInput(text)}
                     value={newExerciseInput}
                     placeholder='New Task'
+                    placeholderTextColor='#617182'
+                    color={textColor}
                     style={styles.textInput}
                 />
-                <TouchableOpacity onPress={() => setOpenTimerModal(true)} style={styles.timerInputLabel}>
-                    <Text>{formattedTime}</Text>
+                <TouchableOpacity onPress={() => setOpenTimerModal(true)} style={styles.buttonTimeInput}>
+                    <Text style={styles.textTimeInput}>{formattedTime}</Text>
                 </TouchableOpacity>
             </View>
             <TimerInputModal  
@@ -104,47 +107,92 @@ const AddExerciseForm = () => {
                 openModal={openTimerModal}
                 setOpenModal={setOpenTimerModal} 
             />
-            {invalidInput && <Text>Please fill in all the blanks.</Text>}
-            <Button onPress={addNewExercise} title="Create" />
+            {invalidInput && <Text style={styles.textInvalid}>Please fill in all the blanks.</Text>} 
+            <View style={styles.viewButtonSet}>
+                <TouchableOpacity onPress={closeForm} style={styles.buttonCancel}>
+                    <Text style={styles.textCancel}>Cancel</Text>    
+                </TouchableOpacity>
+                <TouchableOpacity onPress={addNewExercise} style={styles.buttonCreate}>
+                    <Text style={styles.textCreate}>Create</Text>    
+                </TouchableOpacity>
+            </View>
+            
         </View>
     )
 }
-/* hrIdx={setSelectedHrIdx} 
-minIdx={setSelectedMinIdx} 
-secIdx={setSelectedSecIdx} */
+
 export default AddExerciseForm;
 
 const styles = StyleSheet.create({
-    endButton: {
-        textAlign: 'right',
-        color: ICON_COLOR,
-        fontSize: hp('1%'),
-    },
-    newExerciseView: {
-        backgroundColor: 'white',
-        borderWidth: 2,
-        borderColor: 'grey',
-        paddingVertical: hp('0.5%'),
+    viewMain: {
+        backgroundColor: bgColor,
+        borderWidth: 3,
+        borderColor: textColor,
         marginHorizontal: wp('1%'),
+        marginBottom: hp('1.5%'),
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
     },
-    newExerciseSubView: {
-        backgroundColor: 'white',
+    viewInputBox: {
+        backgroundColor: bgColor,
         padding: hp('1.5%'),
         marginHorizontal: wp('1%'),
-      //  marginBottom: hp('0.5%'),
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
     textInput: {
-        backgroundColor: 'white',
-        borderColor: 'black',
+        backgroundColor: bgColor,
+        borderRadius: 4, 
+        borderColor: textColor, 
         borderWidth: 1,
-        width: wp('65%'),
-      //  marginHorizontal: wp('4%'),
-        paddingHorizontal: wp('3%'),
-        alignSelf: 'center',
+        color: textColor, 
+        width: wp('70%'), 
+        paddingTop: 2, 
+        paddingLeft: 7,
+    },
+    buttonTimeInput: {
+        backgroundColor: '#485460', 
+        borderRadius: 4,
+        paddingTop: hp('0.6%'), 
+        paddingHorizontal: wp('1.5%'),
+    },
+    textTimeInput: {
+        verticalAlign: 'middle',
+        color: textColor,
+    },
+    textInvalid: {
+        textAlign: 'center',
+        color: textColor,
+        borderColor: textColor,
+        paddingBottom: hp('0.5%'),
+    },
+    viewButtonSet: {
+        flexDirection: 'row', 
+        backgroundColor: '#808e9b', 
+        justifyContent: 'space-between', 
+        width: '100%',  
+    },
+    buttonCancel: {
+        backgroundColor: '#485460', 
+        height: '100%', 
+        width: '50%', 
+        paddingVertical: hp('1%'), 
+    },
+    textCancel: {
+        textAlign: 'center', 
+        fontWeight: 'bold',
+        color: textColor,
+    },
+    buttonCreate: {
+        backgroundColor: '#575fcf', 
+        height: '100%',
+        width: '50%', 
+        paddingVertical: hp('1%'), 
+    },
+    textCreate: {
+        textAlign: 'center', 
+        fontWeight: 'bold', 
+        color: textColor,
     },
 })

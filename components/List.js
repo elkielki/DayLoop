@@ -1,16 +1,11 @@
-import React, {useState, useEffect, useContext, useRef} from 'react';
+import React, { useState, useContext } from 'react';
 import { View, StyleSheet, FlatList, Text, TextInput, TouchableOpacity, ScrollView, Button, SafeAreaView } from 'react-native';
-//import SwipeableFlatList from 'react-native-swipeable-list';
-//import { SwipeListView } from 'react-native-swipe-list-view';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {ListContext} from '../listContext.js';
+import { ListContext } from '../listContext.js';
 import TimerInputModal from "./TimerInputModal";
-
-const TEXT_COLOR = 'black';
-const ICON_COLOR = 'black'; 
 
 const List = () => {
     const {routineValue, idxValue} = useContext(ListContext);
@@ -21,33 +16,21 @@ const List = () => {
     
     let row = [];
     let prevOpenedRow;
-    const closeRef = useRef();
 
-    const deleteExercise = async ({item, index}) => {
-        const updatedExerciseList = routineList[currentRoutineIdx].exercises.filter((exercise) => exercise.key !== index)
-        const updatedRoutine = {...routineList[currentRoutineIdx], exercises: updatedExerciseList};
+    // i have no idea why it is flipped but it is
+    const deleteExercise = async (item, index) => {
+        console.log("item: " + JSON.stringify(routineList[currentRoutineIdx].exercises[index]));
+        const updatedExerciseList = [...routineList[currentRoutineIdx].exercises];
+        updatedExerciseList.splice(index, 1);
         const newRoutineList = [...routineList];
-        newRoutineList[currentRoutineIdx] = updatedRoutine;
+        newRoutineList[currentRoutineIdx].exercises = updatedExerciseList;    
         setRoutineList(newRoutineList);
+        console.log("NEW ROUTINE LIST: " + JSON.stringify(newRoutineList));
         try {
           const storedRL = await AsyncStorage.setItem("routineList", JSON.stringify(newRoutineList));
         } catch (error) {
           console.log("An error has occurred");
-        }
-    }
-
-    const renderQuickActions = (idx, item) => {
-        console.log("Quick Actions: " + item); 
-        return (
-          <View style={styles.quickActions}>
-            <TouchableOpacity onPress={() => setEditIdx(idx)}>
-              <Text>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => deleteExercise(item, idx)}>
-                <Icon name='trash-outline' color={ICON_COLOR} style={styles.endButton} />
-            </TouchableOpacity>
-          </View>
-        )
+        } 
     }
 
     const handleEditButton = (index) => {
@@ -57,12 +40,12 @@ const List = () => {
 
     const renderRightActions = (idx, item) => {
         return (
-            <View>
+            <View style={styles.viewSwipeButtonSet}>
                 <TouchableOpacity onPress={() => handleEditButton(idx)}>
-                    <Text>Edit</Text>
+                    <Icon name='create-outline' color='#F4F3F2' size={hp('3%')} style={styles.iconSwipeEdit} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteExercise(item, idx) }>
-                    <Icon name='trash-outline' color={ICON_COLOR} style={styles.endButton} />
+                    <Icon name='trash-outline' color='#F4F3F2' size={hp('3%')} style={styles.iconSwipeDelete} />
                 </TouchableOpacity>
             </View>
         )
@@ -82,50 +65,32 @@ const List = () => {
     }
 
     return (
-        <View>
-            {(routineList[currentRoutineIdx].exercises.length !== 0) ?     
-                <FlatList
-                    data={routineList[currentRoutineIdx].exercises}
-                    key={(item, index) => ('list' + index.toString())}
-                    renderItem={({item, index}) => 
-                        <Swipeable 
-                            ref={ref => (row[index] = ref)} 
-                            renderRightActions={() => renderRightActions(index, item)} 
-                            overshootRight={false}
-                            onSwipeableOpen={() => closeRow(index)}
-                        >
-                            <ListElement item={item} index={index} editIdx={editIdx} handleCancel={cancelTitleChange} />    
-                        </Swipeable> 
-                    }   
-                /> 
-            :
-                <Text>Click "Edit" to create your routine.</Text>
-            }
+        <View style={styles.viewList}>
+            <FlatList
+                data={routineList[currentRoutineIdx].exercises}
+                keyExtractor = {item => item.id}
+                renderItem={({index, item}) => 
+                    <Swipeable 
+                        ref={ref => (row[index] = ref)} 
+                        renderRightActions={() => renderRightActions(index, item)} 
+                        overshootRight={false}
+                        onSwipeableOpen={() => closeRow(index)}
+                    >
+                        <ListElement item={item} index={index} editIdx={editIdx} handleCancel={cancelTitleChange} />    
+                    </Swipeable> 
+                }   
+            /> 
         </View>
     )
 }
 
-/*
-<SwipeListView
-                    keyExtractor={(data, dataMap) => data.key}
-                    data={routineList[currentRoutineIdx].exercises}
-                    renderItem={({data, dataMap}) => <ListElement item={data.item} index={data.item.key} editIdx={editIdx} handleCancel={cancelTitleChange} />}
-                    renderHiddenItem={({index, item}) => renderQuickActions(index, item)}
-                    leftOpenValue={0}
-                    rightOpenValue={-75}
-                
-                    <SwipeableFlatList
-                        keyExtractor={(item, index) => ('list' + index.toString())}
-                        data={routineList[currentRoutineIdx].exercises}
-                        renderItem={({item, index}) => <ListElement item={item} index={index} editIdx={editIdx} handleCancel={cancelTitleChange} />}
-                        maxSwipeDistance={70}
-                        renderQuickActions={({index, item}) => renderQuickActions(index, item)}
-                        shouldBounceOnMount={true}
-                    />
-*/
 export default List;
 
 const ListElement = ({item, index, editIdx, handleCancel}) => {
+    const {routineValue, idxValue} = useContext(ListContext);
+    const [routineList, setRoutineList] = routineValue;
+    const [currentRoutineIdx, setCurrentRoutineIdx] = idxValue;
+
     const [title, setTitle] = useState(item.title);
     const itemTimer = formatTime();
     const [time, setTime] = useState(itemTimer);
@@ -145,6 +110,7 @@ const ListElement = ({item, index, editIdx, handleCancel}) => {
         } catch (error) {
           console.log("An error has occurred");
         }
+        handleCancel(true);
     }
 
     const cancelTextChange = () => {
@@ -157,7 +123,6 @@ const ListElement = ({item, index, editIdx, handleCancel}) => {
     }
 
     const cancelTimerInput = () => {
-        setTime('00:00:00');
         setOpenTimerModal(false);
     }
 
@@ -208,16 +173,17 @@ const ListElement = ({item, index, editIdx, handleCancel}) => {
         setOpenTimerModal(false);
     }
 
-//title
     return (
-            <View style={styles.exerciseView}>
+        <View style={styles.viewListElement} >
+            <View style={styles.viewListElementNotEdit}>
                 <TextInput 
                     value={title}
-                    onChange={(text) => setTitle(text)}
+                    onChangeText={setTitle}
                     editable={editIdx === index ? true : false}
+                    style={editIdx === index ?  styles.textListItemTitle : styles.textListItemTitleDisabled}
                 />
                 <TouchableOpacity onPress={editTime} disabled={editIdx !== index}>
-                    <Text>{time}</Text>
+                    <Text style={styles.textListItem}>{time}</Text>
                 </TouchableOpacity>
                 <TimerInputModal 
                     submitInput={handleTimerInput}
@@ -225,60 +191,114 @@ const ListElement = ({item, index, editIdx, handleCancel}) => {
                     openModal={openTimerModal}
                     setOpenModal={setOpenTimerModal} 
                 />
-                {(editIdx === index) &&
-                    <View>
-                        <Button onPress={editText} title='Confirm' />
-                        <Button onPress={cancelTextChange} title='Cancel' />
-                    </View>
-                }
             </View>
+            {(editIdx === index) &&
+                <View style={styles.viewButtonSet}>
+                    <TouchableOpacity onPress={cancelTextChange} style={styles.buttonCancel}>
+                        <Text style={styles.textCancel}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={editText} style={styles.buttonConfirm}>
+                        <Text style={styles.textConfirm}>Confirm</Text>
+                    </TouchableOpacity>
+                </View>
+            }
+        </View>
     );
 }
+const textColor = '#F4F3F2';
+const bgColor = '#1e272e';
 
 const styles = StyleSheet.create({
-    endButton: {
-        textAlign: 'right',
-        color: ICON_COLOR,
-        fontSize: hp('1%'),
+    viewList: {
+        backgroundColor: bgColor, 
+        flex: 1, 
+        paddingTop: hp('1%'),
+        marginHorizontal: wp('2%'),
     },
-    quickActions: {
-       // flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
+    viewSwipeButtonSet: {
+        flexDirection: 'row', 
+        backgroundColor: bgColor, 
+        marginBottom: hp('1%'), 
+        marginRight: wp('1%'), 
     },
-    exerciseView: {
-        backgroundColor: 'white',
-      //  borderStyle: 'double',
-        borderWidth: 2,
-        borderColor: 'grey',
+    iconSwipeEdit: {
+        paddingLeft: wp('3%'), 
+        paddingRight: wp('2%'), 
+        height: '100%', 
+        backgroundColor: '#575fcf', 
+        paddingTop: '4%', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+    }, 
+    iconSwipeDelete: {
+        paddingHorizontal: wp('2%'), 
+        height: '100%', 
+        backgroundColor: '#f53b57',
+        paddingTop: '4%',
+    },
+    viewListElement: {
+        backgroundColor: bgColor,
+        borderWidth: 2.5,
+        borderColor: textColor,
+        marginBottom: hp('1%'),
+    },
+    viewListElementNotEdit: {
         padding: hp('1.5%'),
         marginHorizontal: wp('1%'),
-        marginBottom: hp('0.5%'),
         flexDirection: 'row',
         justifyContent: 'space-between',
-      /*  height: '26%',
-        width: '95%',
-        fontSize: 5,
-        padding: 0,
-        marginHorizontal: 10,  */
+    },
+    textListItem: {
+        fontSize: hp('2%'),
+        color: textColor,
+    },
+    textListItemTitle: {
+        fontSize: hp('2%'),
+        color: textColor,
+        width: '70%'
+    },
+    textListItemTitleDisabled: {
+        color: textColor,
+        fontSize: hp('2%'),
+        width: '70%',
+        flexWrap: 'wrap',
+    },
+    viewButtonSet: {
+        flexDirection: 'row', 
+        backgroundColor: '#808e9b', 
+        justifyContent: 'space-between', 
+        width: '100%',  
+    },
+    buttonCancel: {
+        backgroundColor: '#485460', 
+        height: '100%', 
+        width: '50%', 
+        paddingVertical: hp('0.5%'), 
+    },
+    textCancel: {
+        textAlign: 'center', 
+        color: textColor, 
+        fontWeight: 'bold', 
+        fontSize: hp('2%')
+    },
+    buttonConfirm: {
+        backgroundColor: '#05c46b', 
+        height: '100%',
+        width: '50%', 
+        paddingVertical: hp('0.5%'), 
+    },
+    textConfirm: {
+        textAlign: 'center', 
+        color: textColor, 
+        fontWeight: 'bold', 
+        fontSize: hp('2%')
+    },
+    quickActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
     },
     exerciseBodyView: {
         flexDirection: 'row',
         justifyContent: 'space-between',
     },
 })
-
-/*
-
-            {editState && 
-                <TouchableOpacity onPress={() => deleteExercise(item, index)} disabled={!editState}>
-                    <Icon name='trash-outline' color={ICON_COLOR} style={styles.endButton} />
-                </TouchableOpacity>
-            }
-
-                {editState && 
-                <TouchableOpacity disabled={!editState}>
-                    <Icon name='menu-outline' color={ICON_COLOR} style={styles.sortButton} />
-                </TouchableOpacity>
-                }
-                */
