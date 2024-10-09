@@ -5,69 +5,13 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ListContext } from './listContext.js';
 import List from './components/List.js';
-import AddExerciseForm from './components/AddExercise.js';
+import AddRoutineForm from './components/AddRoutine.js';
 import RoutineMenu from './components/RoutineMenu.js';
 import Toolbar from './components/Toolbar.js';
-import mobileAds, { BannerAd, BannerAdSize, TestIds, AdsConsent, AdsConsentStatus, AdsConsentDebugGeography, MaxAdContentRating } from 'react-native-google-mobile-ads';
 
 const App = () => {
-  /* AD STUFF */  
-  useEffect(() => {
-    let isMobileAdsStartCalled = false;
-
-    async function startGoogleMobileAdsSDK() {
-      if (isMobileAdsStartCalled) return;
-      isMobileAdsStartCalled = true;
-      // Initialize the Google Mobile Ads SDK.
-      mobileAds()
-        .setRequestConfiguration({
-          // Update all future requests suitable for parental guidance
-          maxAdContentRating: MaxAdContentRating.G,
-          // Indicates that you want your content treated as child-directed for purposes of COPPA.
-          tagForChildDirectedTreatment: true,
-          // Indicates that you want the ad request to be handled in a
-          // manner suitable for users under the age of consent.
-          tagForUnderAgeOfConsent: true,
-          // An array of test device IDs to allow.
-          testDeviceIdentifiers: ['EMULATOR'],
-        })
-        await mobileAds().initialize()
-    }
-
-    const checkConsent = async () => {
-      // Request an update for the consent information.
-      AdsConsent.requestInfoUpdate().then(() => {
-        AdsConsent.loadAndShowConsentFormIfRequired().then(adsConsentInfo => {
-          // Consent has been gathered.
-          if (adsConsentInfo.canRequestAds) {
-            startGoogleMobileAdsSDK()
-          }
-        })
-      })
-    
-      // checks if consent was given for ads
-      const {canRequestAds} = await AdsConsent.getConsentInfo()
-      if (canRequestAds) {
-        const {
-          storeAndAccessInformationOnDevice,
-        } = await AdsConsent.getUserChoices();
-        
-        if (storeAndAccessInformationOnDevice === false) {
-          /**
-           * The user declined consent for purpose 1,
-           * the Google Mobile Ads SDK won't serve ads.
-           */
-        }
-        startGoogleMobileAdsSDK()
-      }    
-    }
-    
-    checkConsent();
-  }, []);
-
-
-/*  END OF AD STUFF */
-
+  
+  // Example routine data
   const initialRoutineListData = [
     {
       routineId: '1433704743870', 
@@ -99,13 +43,16 @@ const App = () => {
     }
   ];
 
-  // list of all routines - basically all the data
+  // List of all the routines
   const [routineList, setRoutineList] = useState(initialRoutineListData);
-  // the current routine
+  // The routine displayed on the screen
   const [currentRoutineIdx, setCurrentRoutineIdx] = useState(0);
+  // For loading screen
   const [isLoading, setIsLoading] = useState(true);
-  const [createNewExercise, setCreateNewExercise] = useState(false);
+  // Displays new routine form when true
+  const [createNewRoutine, setCreateNewRoutine] = useState(false);
 
+  // Gets user's routine list data at launch
   useEffect(() => {
     const getData = async () => {
       const launchCheck = await AsyncStorage.getItem("hasLaunched");
@@ -117,7 +64,6 @@ const App = () => {
         try {
           const storedRL = await AsyncStorage.getItem("routineList");
           setRoutineList(JSON.parse(storedRL));
-    //      console.log("RoutineList: " + JSON.stringify(routineList));
         } catch (error) {
           console.log("An error has occurred");
         }
@@ -135,8 +81,9 @@ const App = () => {
     }
   }, [])
 
-  const handleNewExerciseButton = (value) => {
-    setCreateNewExercise(value);
+  // Trigger add routine form to open
+  const handleNewRoutineButton = (value) => {
+    setCreateNewRoutine(value);
   }
 
   return (
@@ -150,18 +97,10 @@ const App = () => {
           <ListContext.Provider value={{routineValue: [routineList, setRoutineList], idxValue: [currentRoutineIdx, setCurrentRoutineIdx]}}>
             <View style={styles.viewAppScreen}>
               <RoutineMenu />
-              <Toolbar setOpenForm={handleNewExerciseButton} openForm={createNewExercise} />
+              <Toolbar setOpenForm={handleNewRoutineButton} openForm={createNewRoutine} />
               <List />
-              {createNewExercise && <AddExerciseForm openForm={setCreateNewExercise} />} 
+              {createNewRoutine && <AddRoutineForm openForm={setCreateNewRoutine} />} 
             </View> 
-            <BannerAd
-              unitId='ca-app-pub-5596202903526662/8265395371'
-              size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-              requestOptions={{ 
-                requestNonPersonalizedAdsOnly: true,
-                keywords: ['exercise', 'mental', 'health', 'journal', 'schedule', 'plan']
-              }}
-            />
           </ListContext.Provider>
         }
       </GestureHandlerRootView>
@@ -175,12 +114,14 @@ const  textColor = '#F4F3F2';
 const bgColor = '#1e272e';
 
 const styles = StyleSheet.create({
+  // View containing whole app screen
   viewApp: {
     height: hp('100%'),
     width: wp('100%'),
     flex: 1,
     backgroundColor: bgColor,
   },
+  // Loading screen
   loadingView: {
     display: 'flex',
     flex: 1,
@@ -188,10 +129,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // View containing the list and all content
   viewAppScreen: {
     flex: 1, 
     width: wp('100%'), 
     height: hp('100%')
   },
-
 });

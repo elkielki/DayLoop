@@ -1,7 +1,7 @@
-import React, {useState, useContext} from 'react';
+import React, { useState, useContext } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import Modal from "react-native-modal";
-import {widthPercentageToDP as wp, heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ListContext } from '../listContext.js';
 import PlayScreen from './PlayScreen.js';
@@ -10,12 +10,14 @@ import DeleteRoutine from './DeleteRoutine.js';
 const textColor = '#F4F3F2';
 const bgColor = '#1e272e';
 
+// This toolbar includes the play and delete routine buttons and appears above the list elements. 
 const Toolbar = ({setOpenForm, openForm}) => {
+    // Gets routine list info
     const {routineValue, idxValue} = useContext(ListContext);
     const [routineList, setRoutineList] = routineValue;
     const [currentRoutineIdx, setCurrentRoutineIdx] = idxValue;
 
-    // open the modal to start routine
+    // Opens modal to start routine
     const [startRoutine, setStartRoutine] = useState(false);
 
     return (
@@ -33,6 +35,7 @@ const Toolbar = ({setOpenForm, openForm}) => {
                     }
                 </TouchableOpacity>
             </View>
+            {/* Opens modal to "play" the routine */}
             <Modal isVisible={startRoutine} backdropOpacity={0.8} style={{alignItems: 'center'}}>
               <PlayScreen handleClose={setStartRoutine}/>
             </Modal>
@@ -48,16 +51,14 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginHorizontal: wp('2%'),
     },
+    // View containing play and add buttons
     viewRightButtons: {
         flexDirection: 'row'
     },
     buttonPlay: {
         marginRight: wp('1%'),
     },
-    toolbarButtons: {
-        borderRadius: 2,
-        backgroundColor: bgColor,
-    },
+    // Button to create new routine
     closeAddButton: {
         display: 'flex',
         flexDirection: 'row',

@@ -9,18 +9,24 @@ import { ListContext } from '../listContext.js';
 const textColor = '#F4F3F2';
 const bgColor = '#1e272e';
 
+// This menu displays the user's list of routines as well as a buttons to create and delete routines.
 const RoutineMenu = () => {
+
+  // Get routine list info
   const {routineValue, idxValue} = useContext(ListContext);
   const [routineList, setRoutineList] = routineValue;
   const [currentRoutineIdx, setCurrentRoutineIdx] = idxValue;
 
-  // for routine modal visibility
+  // For routine modal visibility
   const [routineMenuOpen, setRoutineMenuOpen] = useState(false);
-  // for new routine title in routine form
+  // For new routine title in routine form
   const [newRoutineInput, setNewRoutineInput] = useState('');
   const [invalidRoutineResponse, setInvalidRoutineResponse] = useState(false);
   const [openNewRoutineForm, setOpenNewRoutineForm] = useState(false);
   
+  /* Parameters: idx - the index of the routine the user wants to switch to
+     Switches the current routine 
+  */
   const switchRoutines = async (idx) => {
       setCurrentRoutineIdx(idx);
       setRoutineMenuOpen(false);
@@ -31,13 +37,21 @@ const RoutineMenu = () => {
       }
   }
 
+  /* Parameters: val - user-inputted title for new routine
+     Creates a new routine and updates routine list
+  */
   const handleNewRoutine = async (val) => {
       if (val) {
+        // Checking for valid input
         if (newRoutineInput.trim() !== '') {
+          // Creating unique id for new routine
           const newId = Math.floor(Date.now() * Math.random());
+          // Adding routine to routine list
           const newRoutineList = [...routineList, {routineId: newId, title: newRoutineInput, exercises: []}]
+          // Updating routine list and index of current routine
           setRoutineList(newRoutineList)
           setCurrentRoutineIdx(newRoutineList.length - 1);
+          // Resetting some variables
           setRoutineMenuOpen(false);
           setInvalidRoutineResponse(false);
           setNewRoutineInput('');
@@ -63,7 +77,8 @@ const RoutineMenu = () => {
         setOpenNewRoutineForm(false);
       }
   }
-  
+
+  // Creates a line - purely decorative
   const ItemSeparator = () => {
     return (
       <View
@@ -72,6 +87,7 @@ const RoutineMenu = () => {
     )
   }
 
+  // Closes the routine menu
   const handleCloseModal = () => {
     setRoutineMenuOpen(false)
     setNewRoutineInput('');
@@ -81,9 +97,12 @@ const RoutineMenu = () => {
 
   return (
       <View>
+        {/* Title of current routine - if clicked, shows the list of routines */}
         <TouchableOpacity onPress={() => setRoutineMenuOpen(true)}>
           <Text style={styles.textTitle}>{routineList[currentRoutineIdx].title}</Text> 
         </TouchableOpacity> 
+
+        {/* Routine List */}
         <Modal isVisible={routineMenuOpen} style={styles.modal} >
           <View style={styles.modalView}>
             <View style={styles.viewNoButton}>
@@ -104,9 +123,12 @@ const RoutineMenu = () => {
                   }   
                   style={styles.list}
                 /> 
+
+                {/* Creating a new routine */}
                 {openNewRoutineForm && 
                   <View style={styles.viewForm}>
                     <ItemSeparator />
+                    {/* Input box to add title of new routine */}
                     <View
                       style={{ height: 1, backgroundColor: {textColor}, width: '90%', marginBottom: hp('1%'), marginHorizontal: '5%' }}
                     />
@@ -118,6 +140,7 @@ const RoutineMenu = () => {
                       color={textColor}
                       style={styles.textInput}
                     />
+                    {/* Cancel and confirm buttons */}
                     <View style={styles.viewButtonSet}>
                       <TouchableOpacity onPress={() => handleNewRoutine(false)} style={styles.buttonCancel}>
                         <Text style={styles.textCancel}>Cancel</Text>
@@ -126,15 +149,18 @@ const RoutineMenu = () => {
                         <Text style={styles.textConfirm}>Confirm</Text>
                       </TouchableOpacity> 
                     </View>
+                    {/*Invalid error messages */}
                     {!invalidRoutineResponse && <Text style={styles.textCreateRoutineMessage}>*Routine names cannot be edited after creation.</Text>}
                     {invalidRoutineResponse && <Text style={styles.textCreateRoutineMessage}>The routine name is invalid. Please try again.</Text>}
                   </View>
                 }
               </View>
             </View>
-              <TouchableOpacity onPress={() => setOpenNewRoutineForm(true)} style={styles.buttonCreate}>
-                <Text style={styles.textCreate}>Create</Text>
-              </TouchableOpacity> 
+            
+            {/* Button to open form to create new routine */}
+            <TouchableOpacity onPress={() => setOpenNewRoutineForm(true)} style={styles.buttonCreate}>
+              <Text style={styles.textCreate}>Create</Text>
+            </TouchableOpacity> 
           </View>
         </Modal>
       </View>
@@ -146,7 +172,8 @@ export default RoutineMenu;
 // justify is for primary axis, align is for cross axis
 
 const styles = StyleSheet.create({
-    textTitle: {                          // for title on the main screen
+    // Title of the current routine (the clickable text that opens the modal)
+    textTitle: {
       textAlign: 'center',
       fontWeight: 'bold',
       fontSize: hp('5%'), 
@@ -154,11 +181,13 @@ const styles = StyleSheet.create({
       paddingTop: hp('7%'),
       paddingBottom: hp('2%'),
     },
-    modal: {                              // for centering the modal screen
+    // For modal itself, not the content inside
+    modal: {                             
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
     },
+    // View for all modal content
     modalView: {
       backgroundColor: bgColor,
       height: hp('60%'),
@@ -167,6 +196,7 @@ const styles = StyleSheet.create({
       justifyContent: 'space-between',  
       alignContent: 'center',
     },
+    // View containing all modal content except the create new routine button
     viewNoButton: {
       display: 'flex',
       flexDirection: 'column',
@@ -179,6 +209,7 @@ const styles = StyleSheet.create({
       display: 'flex',
       alignItems: 'flex-end',
     },
+    // Title of the routine list - currently "Routines"
     textListTitle: {
       fontSize: hp('3.5%'), 
       color: textColor,
@@ -186,16 +217,16 @@ const styles = StyleSheet.create({
       marginHorizontal: '5%',
       fontWeight: 'bold',
     },
+    // Title of routine element that is shown in the list 
     textListItemTitle: {
       fontSize: hp('2.5%'), 
       color: textColor,
       paddingVertical: hp('0.5%'),
       marginHorizontal: '5%',
     }, 
+    // List showing routine titles
     list: {
       marginTop: hp('2%'),
-    },
-    viewForm: {
     },
     textInput: {
       borderWidth: 1,
@@ -213,6 +244,7 @@ const styles = StyleSheet.create({
       paddingVertical: hp('1%'),
       marginHorizontal: '5%',
     },
+    // View containing cancel and confirm buttons
     viewButtonSet: {
       flexDirection: 'row', 
       backgroundColor: bgColor, 
