@@ -8,8 +8,8 @@ import TimerInputModal from "./TimerInputModal.js";
 const textColor = '#F4F3F2';
 const bgColor = '#1e272e';
 
-// Creates the form the user can fill to create a new routine 
-const AddRoutineForm = ({openForm}) => {
+// Creates the form the user can fill to create a new task for the current routine
+const AddTaskForm = ({openForm}) => {
     // Getting and setting user's routine list and current routine index
     const {routineValue, idxValue} = useContext(ListContext);
     const [routineList, setRoutineList] = routineValue;
@@ -93,7 +93,7 @@ const AddRoutineForm = ({openForm}) => {
         setOpenTimerModal(false);
     }
 
-    // Closes the add routine form
+    // Closes the add task form
     const closeForm = () => {
         openForm(false);
         // Resetting all the form values
@@ -104,7 +104,7 @@ const AddRoutineForm = ({openForm}) => {
 
     return (
         <View style={styles.viewMain} >
-            {/* Add routine form to edit title and timer input */}
+            {/* Form to edit title and timer input of new task */}
             <View style={styles.viewInputBox}>
                 <TextInput
                     onChangeText={(text) => setNewTaskInput(text)}
@@ -130,7 +130,7 @@ const AddRoutineForm = ({openForm}) => {
             {/* Error message for invalid input */}
             {invalidInput && <Text style={styles.textInvalid}>Please fill in all the blanks.</Text>} 
             
-            {/* Cancel and create buttons for add routine form */}
+            {/* Cancel and create buttons for add task form */}
             <View style={styles.viewButtonSet}>
                 <TouchableOpacity onPress={closeForm} style={styles.buttonCancel}>
                     <Text style={styles.textCancel}>Cancel</Text>    
@@ -143,7 +143,7 @@ const AddRoutineForm = ({openForm}) => {
     )
 }
 
-export default AddRoutineForm;
+export default AddTaskForm;
 
 const styles = StyleSheet.create({
     // View containing all the elements

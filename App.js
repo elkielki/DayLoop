@@ -5,7 +5,7 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ListContext } from './listContext.js';
 import List from './components/List.js';
-import AddRoutineForm from './components/AddRoutine.js';
+import AddTaskForm from './components/AddTask.js';
 import RoutineMenu from './components/RoutineMenu.js';
 import Toolbar from './components/Toolbar.js';
 
@@ -99,7 +99,7 @@ const App = () => {
               <RoutineMenu />
               <Toolbar setOpenForm={handleNewRoutineButton} openForm={createNewRoutine} />
               <List />
-              {createNewRoutine && <AddRoutineForm openForm={setCreateNewRoutine} />} 
+              {createNewRoutine && <AddTaskForm openForm={setCreateNewRoutine} />} 
             </View> 
           </ListContext.Provider>
         }
